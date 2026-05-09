@@ -1,8 +1,8 @@
-# Documentacao Funcional -- Sistema de Controle de Eventos Kumon
+# WAGNER2 - Documentacao Funcional -- Sistema de Controle de Eventos Kumon
 
 ## 1. Proposito do Sistema
 
-Sistema web para gerenciamento de eventos presenciais em unidades Kumon. Permite registrar presenca de participantes, controlar entrega de premios por categoria e realizar sorteios ao vivo durante o evento.
+Sistema WAGNER-web para gerenciamento de eventos presenciais em unidades Kumon. Permite registrar presenca de participantes, controlar entrega de premios por categoria e realizar sorteios ao vivo durante o evento.
 
 ---
 
@@ -28,16 +28,17 @@ Atualizacao automatica a cada 2 minutos.
 
 **Funcionalidades:**
 
-| Acao | Descricao |
-|------|-----------|
-| Buscar | Campo de texto para filtrar por matricula (numero) ou nome |
-| Filtrar por Status | Dropdown: Todos / Presentes / Ausentes |
-| Marcar Presente | Botao "Presente" -- registra presenca do participante |
-| Marcar Ausente | Botao "Ausente" -- reverte presenca para ausencia |
-| Marcar Pago | Botao "Pago" -- registra que o participante efetuou pagamento |
-| Marcar Nao Pago | Botao "Nao Pago" -- reverte status de pagamento |
+| Acao               | Descricao                                                     |
+| ------------------ | ------------------------------------------------------------- |
+| Buscar             | Campo de texto para filtrar por matricula (numero) ou nome    |
+| Filtrar por Status | Dropdown: Todos / Presentes / Ausentes                        |
+| Marcar Presente    | Botao "Presente" -- registra presenca do participante         |
+| Marcar Ausente     | Botao "Ausente" -- reverte presenca para ausencia             |
+| Marcar Pago        | Botao "Pago" -- registra que o participante efetuou pagamento |
+| Marcar Nao Pago    | Botao "Nao Pago" -- reverte status de pagamento               |
 
 **Regra de negocio:**
+
 - Cada participante aparece com status PRESENTE (verde) ou AUSENTE (vermelho)
 - O status de pagamento e independente da presenca (PAGO / NAO_PAGO)
 - Participantes com tipo CONVIDADO tambem sao exibidos na lista
@@ -50,14 +51,15 @@ Atualizacao automatica a cada 2 minutos.
 
 **Funcionalidades:**
 
-| Acao | Descricao |
-|------|-----------|
-| Selecionar Categoria | Dropdown com todas as categorias cadastradas |
+| Acao                 | Descricao                                            |
+| -------------------- | ---------------------------------------------------- |
+| Selecionar Categoria | Dropdown com todas as categorias cadastradas         |
 | Visualizar Elegiveis | Tabela com participantes presentes daquela categoria |
-| Marcar Entregue | Botao "Entregar" -- registra a entrega do premio |
-| Reverter Entrega | Botao "Pendente" -- volta o status para nao entregue |
+| Marcar Entregue      | Botao "Entregar" -- registra a entrega do premio     |
+| Reverter Entrega     | Botao "Pendente" -- volta o status para nao entregue |
 
 **Regra de negocio:**
+
 - So aparecem na lista participantes com presenca confirmada (`status_presente = 'SIM'`)
 - So aparecem participantes do tipo ALUNO e suas variantes (ALUNO/AUXILIAR, AUXILIAR, CONCLUINTE/ALUNA, CONCLUINTE/AUXILIAR, CONCLUINTE)
 - Colunas exibidas: Categoria, Nome (com matricula), Status Presente, Status Entrega
@@ -71,14 +73,15 @@ Atualizacao automatica a cada 2 minutos.
 
 **Funcionalidades:**
 
-| Acao | Descricao |
-|------|-----------|
-| Realizar Sorteio | Sorteia aleatoriamente um participante entre os presentes ainda nao sorteados |
-| Limpar Sorteios | Remove todo o historico de sorteios (com confirmacao) |
-| Popup de Resultado | Animacao com o numero do sorteado + efeito visual |
-| Historico | Lista ordenada com todos os sorteados |
+| Acao               | Descricao                                                                     |
+| ------------------ | ----------------------------------------------------------------------------- |
+| Realizar Sorteio   | Sorteia aleatoriamente um participante entre os presentes ainda nao sorteados |
+| Limpar Sorteios    | Remove todo o historico de sorteios (com confirmacao)                         |
+| Popup de Resultado | Animacao com o numero do sorteado + efeito visual                             |
+| Historico          | Lista ordenada com todos os sorteados                                         |
 
 **Regra de negocio:**
+
 - Apenas participantes com status PRESENTE participam do sorteio
 - Um participante ja sorteado nao pode ser sorteado novamente (na mesma sessao)
 - O historico de sorteios e persistido no `localStorage` do navegador (versao `script-com-api.js`)
@@ -92,6 +95,7 @@ Atualizacao automatica a cada 2 minutos.
 **Objetivo:** Visao consolidada dos dados do evento.
 
 Exibe tres secoes:
+
 1. **Resumo:** Cards com totais (participantes, presentes, premios, sorteios)
 2. **Presenca:** Lista detalhada de presenca
 3. **Premiacao:** Lista de premios entregues
@@ -104,6 +108,7 @@ Exibe tres secoes:
 **Objetivo:** Visualizacao completa do cadastro de participantes.
 
 Exibe tabela com:
+
 - Matricula (numero)
 - Nome completo
 - Tipo (ALUNO, AUXILIAR, CONCLUINTE, CONVIDADO, etc.)
@@ -113,16 +118,16 @@ Exibe tabela com:
 
 ## 3. Tipos de Participantes
 
-| Tipo | Descricao |
-|------|-----------|
-| ALUNO | Aluno regular da unidade |
-| AUXILIAR | Auxiliar/colaborador da unidade |
-| CONCLUINTE | Aluno que concluiu o metodo |
-| CONVIDADO | Participante convidado (nao elegivel para premios) |
-| ALUNO/AUXILIAR | Dupla funcao |
-| AUXILIAR/ALUNA | Dupla funcao |
-| CONCLUINTE/ALUNA | Dupla funcao |
-| CONCLUINTE/AUXILIAR | Dupla funcao |
+| Tipo                | Descricao                                          |
+| ------------------- | -------------------------------------------------- |
+| ALUNO               | Aluno regular da unidade                           |
+| AUXILIAR            | Auxiliar/colaborador da unidade                    |
+| CONCLUINTE          | Aluno que concluiu o metodo                        |
+| CONVIDADO           | Participante convidado (nao elegivel para premios) |
+| ALUNO/AUXILIAR      | Dupla funcao                                       |
+| AUXILIAR/ALUNA      | Dupla funcao                                       |
+| CONCLUINTE/ALUNA    | Dupla funcao                                       |
+| CONCLUINTE/AUXILIAR | Dupla funcao                                       |
 
 **Regra de elegibilidade para premios:** Apenas participantes com tipo contendo ALUNO, AUXILIAR ou CONCLUINTE sao exibidos na lista de premiacao. CONVIDADOS nao aparecem.
 
@@ -166,12 +171,12 @@ Exibe tabela com:
 
 ## 5. Perfis de Usuario
 
-| Perfil | Acessos |
-|--------|---------|
-| Recepcionista | Abas: Dashboard, Recepcao (check-in) |
-| Responsavel por Premios | Abas: Dashboard, Premiacao |
-| Mestre de Cerimonias | Abas: Dashboard, Sorteio |
-| Administrador | Todas as abas, incluindo Gerenciar e Relatorios |
+| Perfil                  | Acessos                                         |
+| ----------------------- | ----------------------------------------------- |
+| Recepcionista           | Abas: Dashboard, Recepcao (check-in)            |
+| Responsavel por Premios | Abas: Dashboard, Premiacao                      |
+| Mestre de Cerimonias    | Abas: Dashboard, Sorteio                        |
+| Administrador           | Todas as abas, incluindo Gerenciar e Relatorios |
 
 ---
 
