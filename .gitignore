@@ -6,6 +6,7 @@ ssl/
 
 # Backups
 bkp/
+util/
 
 # Python
 __pycache__/
