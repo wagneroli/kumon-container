@@ -564,7 +564,7 @@
       }
 
       var html =
-        '<table class="data-table"><thead><tr><th>Categoria</th><th>Nome</th><th class="text-center">Presente</th><th class="text-center">Entrega</th><th class="text-center">Acao</th></tr></thead><tbody>';
+        '<table class="data-table"><thead><tr><th>Categoria</th><th>Nome</th><th class="text-center">Presente</th><th class="text-center">Pagamento</th><th class="text-center">Entrega</th><th class="text-center">Acao</th></tr></thead><tbody>';
       premios.forEach(function (premio) {
         var isEntregue = premio.status_entrega === "ENTREGUE";
         var entregaBadge = isEntregue
@@ -574,6 +574,10 @@
           premio.status_presente === "SIM"
             ? '<span class="badge badge--success">SIM</span>'
             : '<span class="badge badge--danger">NAO</span>';
+        var isPaid = premio.status_pago === "PAGO";
+        var pagoBadge = isPaid
+          ? '<span class="badge badge--success">PAGO</span>'
+          : '<span class="badge badge--danger">' + (premio.status_pago || 'NAO_PAGO') + '</span>';
         var btnLabel = isEntregue ? "Reverter" : "Entregar";
         var btnClass = isEntregue ? "btn--secondary" : "btn--success";
         var novoStatus = isEntregue ? "NAO" : "ENTREGUE";
@@ -590,6 +594,9 @@
           "</td>" +
           '<td class="text-center">' +
           presenteBadge +
+          "</td>" +
+          '<td class="text-center">' +
+          pagoBadge +
           "</td>" +
           '<td class="text-center">' +
           entregaBadge +
@@ -628,6 +635,58 @@
       }
     } catch (e) {
       showToast("Erro ao atualizar", "error");
+    }
+  }
+
+  /* ===================================================================
+     VALIDACAO PREMIACAO
+     =================================================================== */
+  async function executarValidacaoPremiacao() {
+    var banner = document.getElementById("validacao-banner");
+    var btn = document.getElementById("btn-validar-premiacao");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Validando...";
+    }
+    banner.style.display = "block";
+    banner.innerHTML =
+      '<div style="background:var(--color-info-bg);border:1px solid var(--color-info);border-radius:var(--radius-md);padding:var(--space-14) var(--space-20);color:var(--color-info);">Verificando premiacoes...</div>';
+
+    try {
+      var r = await fetch(API + "/premiacao/validar");
+      var v = await r.json();
+
+      if (v.status === "ok") {
+        banner.innerHTML =
+          '<div style="background:var(--color-success-bg);border:1px solid var(--color-success);border-radius:var(--radius-md);padding:var(--space-14) var(--space-20);display:flex;align-items:center;gap:var(--space-10);">' +
+          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="' + (document.documentElement.getAttribute("data-theme") === "dark" ? "#4ade80" : "#16a34a") + '" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' +
+          '<div><strong>Todas as premiacoes OK</strong><br><span style="font-size:var(--font-size-sm);">' +
+          v.elegiveis_pagos + " alunos elegiveis (presentes + pago) de " + v.total_presentes + " presentes.</span></div>" +
+          "</div>";
+      } else {
+        var violacoesHtml = "";
+        v.detalhes.forEach(function (item) {
+          violacoesHtml +=
+            "<tr><td>" + (item.categoria_nome || "-") + "</td>" +
+            "<td><strong>#" + item.numero + "</strong> - " + item.nome + "</td>" +
+            '<td class="text-center"><span class="badge badge--danger">' + (item.status_pago || 'NAO_PAGO') + "</span></td></tr>";
+        });
+        banner.innerHTML =
+          '<div style="background:var(--color-danger-bg);border:1px solid var(--color-danger);border-radius:var(--radius-md);padding:var(--space-14) var(--space-20);">' +
+          '<div style="display:flex;align-items:center;gap:var(--space-10);color:var(--color-danger);margin-bottom:var(--space-12);">' +
+          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' +
+          "<strong>" + v.mensagem + "</strong></div>" +
+          '<div class="data-table-wrapper" style="max-height:250px;">' +
+          '<table class="data-table"><thead><tr><th>Categoria</th><th>Nome</th><th class="text-center">Pagamento</th></tr></thead><tbody>' +
+          violacoesHtml + "</tbody></table></div></div>";
+      }
+    } catch (e) {
+      banner.innerHTML =
+        '<div style="background:var(--color-danger-bg);border:1px solid var(--color-danger);border-radius:var(--radius-md);padding:var(--space-14) var(--space-20);color:var(--color-danger);">Erro ao validar: ' + e.message + "</div>";
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Validar Premiacoes";
     }
   }
 
@@ -776,6 +835,7 @@
   window.atualizarPremio = atualizarPremio;
   window.fecharModalSorteio = fecharModalSorteio;
   window.carregarListaPresenca = carregarListaPresenca;
+  window.executarValidacaoPremiacao = executarValidacaoPremiacao;
 
   /* ===================================================================
      INIT

@@ -220,17 +220,24 @@
       <div class="page-content">
         <div class="card">
           <div class="card__body">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Selecionar Categoria</label>
-              <select id="select-categoria" class="form-control" onchange="carregarPremiosPorCategoria()" style="max-width:400px;">
-                <option value="">Carregando categorias...</option>
-              </select>
+            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="form-group" style="margin-bottom:0; flex:1; min-width:250px;">
+                <label class="form-label">Selecionar Categoria</label>
+                <select id="select-categoria" class="form-control" onchange="carregarPremiosPorCategoria()" style="max-width:400px;">
+                  <option value="">Carregando categorias...</option>
+                </select>
+              </div>
+              <button id="btn-validar-premiacao" class="btn btn--outline" onclick="executarValidacaoPremiacao()" style="flex-shrink:0;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Validar
+              </button>
             </div>
+            <div id="validacao-banner" style="display:none; margin-top:var(--space-12);"></div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card__header"><h2>Alunos Elegiveis</h2></div>
+          <div class="card__header"><h2>Alunos Elegiveis (Presentes + Pago)</h2></div>
           <div class="card__body" style="padding:0;">
             <div id="lista-premios-container" class="data-table-wrapper">
               <p class="empty-state">

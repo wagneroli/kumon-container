@@ -142,41 +142,44 @@ def participantes():
 
 @app.route('/api/premios/categoria/<int:categoria_id>')
 def premios_por_categoria(categoria_id):
-    """GET premios da tabela lista_de_premios filtrados por categoria_id E status_presente = SIM E tipo = ALUNO"""
+    """GET premios da tabela lista_de_premios com JOIN em participantes — filtra status_presente=SIM, tipo=ALUNO, status_pago=PAGO"""
     try:
         print(f"[DEBUG] Buscando premios para categoria_id: {categoria_id}")
         c = get_conn()
         if not c:
             print("[DEBUG] Erro: sem conexao com DB")
             return jsonify([]), 200
-        
+
         cur = c.cursor(dictionary=True)
         cur.execute("""
           SELECT
-        id,
-        participante_id,
-        categoria_id,
-        nome,
-        numero,
-        tipo,
-        categoria_nome,
-        status_presente,
-        status_entrega
-      FROM lista_de_premios
-      WHERE categoria_id = %s
-      AND status_presente = 'SIM'
-      AND tipo IN ('ALUNO',
-                   'ALUNO/AUXILIAR',
-                   'AUXILIAR',
-                   'AUXILIAR/ALUNA',
-                   'CONCLUINTE/ALUNA',
-                   'CONCLUINTE/AUXILIAR',
-                   'CONCLUINTE')
-      ORDER BY nome
+            lp.id,
+            lp.participante_id,
+            lp.categoria_id,
+            lp.nome,
+            lp.numero,
+            lp.tipo,
+            lp.categoria_nome,
+            lp.status_presente,
+            lp.status_entrega,
+            COALESCE(p.status_pago, 'NAO_PAGO') AS status_pago
+          FROM lista_de_premios lp
+          LEFT JOIN participantes p ON lp.participante_id = p.id
+          WHERE lp.categoria_id = %s
+            AND lp.status_presente = 'SIM'
+            AND lp.tipo IN ('ALUNO',
+                     'ALUNO/AUXILIAR',
+                     'AUXILIAR',
+                     'AUXILIAR/ALUNA',
+                     'CONCLUINTE/ALUNA',
+                     'CONCLUINTE/AUXILIAR',
+                     'CONCLUINTE')
+            AND (p.status_pago = 'PAGO' OR p.status_pago IS NULL)
+          ORDER BY lp.nome
         """, (categoria_id,))
-        
+
         r = cur.fetchall()
-        print(f"[DEBUG] Encontrados {len(r)} premios presentes para categoria {categoria_id}")
+        print(f"[DEBUG] Encontrados {len(r)} premios presentes e pagos para categoria {categoria_id}")
         cur.close()
         c.close()
         return jsonify(r), 200
@@ -185,6 +188,77 @@ def premios_por_categoria(categoria_id):
         import traceback
         traceback.print_exc()
         return jsonify([]), 200
+
+@app.route('/api/premiacao/validar')
+def validar_premiacoes():
+    """Audita todas as premiacoes — verifica regra: status_presente=SIM AND status_pago=PAGO"""
+    try:
+        c = get_conn()
+        if not c:
+            return jsonify({"erro": "sem conexao"}), 500
+
+        cur = c.cursor(dictionary=True)
+
+        # Total de elegiveis (presentes + pagos)
+        cur.execute("""
+            SELECT COUNT(*) AS total
+            FROM lista_de_premios lp
+            INNER JOIN participantes p ON lp.participante_id = p.id
+            WHERE lp.status_presente = 'SIM'
+              AND p.status_pago = 'PAGO'
+              AND lp.tipo IN ('ALUNO','ALUNO/AUXILIAR','AUXILIAR','AUXILIAR/ALUNA',
+                              'CONCLUINTE/ALUNA','CONCLUINTE/AUXILIAR','CONCLUINTE')
+        """)
+        elegiveis = cur.fetchone()['total']
+
+        # Total na lista_de_premios com status_presente=SIM (antes do filtro pago)
+        cur.execute("""
+            SELECT COUNT(*) AS total
+            FROM lista_de_premios
+            WHERE status_presente = 'SIM'
+              AND tipo IN ('ALUNO','ALUNO/AUXILIAR','AUXILIAR','AUXILIAR/ALUNA',
+                           'CONCLUINTE/ALUNA','CONCLUINTE/AUXILIAR','CONCLUINTE')
+        """)
+        total_presentes = cur.fetchone()['total']
+
+        # Violacoes: presentes mas NAO PAGOS
+        cur.execute("""
+            SELECT
+                lp.id,
+                lp.participante_id,
+                lp.nome,
+                lp.numero,
+                lp.categoria_nome,
+                lp.status_presente,
+                COALESCE(p.status_pago, 'NAO_PAGO') AS status_pago
+            FROM lista_de_premios lp
+            LEFT JOIN participantes p ON lp.participante_id = p.id
+            WHERE lp.status_presente = 'SIM'
+              AND (p.status_pago != 'PAGO' OR p.status_pago IS NULL)
+              AND lp.tipo IN ('ALUNO','ALUNO/AUXILIAR','AUXILIAR','AUXILIAR/ALUNA',
+                              'CONCLUINTE/ALUNA','CONCLUINTE/AUXILIAR','CONCLUINTE')
+            ORDER BY lp.categoria_nome, lp.nome
+        """)
+        violacoes = cur.fetchall()
+
+        cur.close()
+        c.close()
+
+        status = "ok" if len(violacoes) == 0 else "inconsistencias"
+
+        return jsonify({
+            "status": status,
+            "total_presentes": total_presentes,
+            "elegiveis_pagos": elegiveis,
+            "violacoes": len(violacoes),
+            "detalhes": violacoes,
+            "mensagem": "Todas as premiacoes estao OK" if len(violacoes) == 0
+                else f"Encontradas {len(violacoes)} violacoes: participantes presentes mas NAO PAGOS"
+        }), 200
+    except Exception as e:
+        print(f"[ERROR] Erro /api/premiacao/validar: {e}")
+        return jsonify({"erro": str(e)}), 500
+
 
 @app.route('/api/presenca', methods=['POST'])
 def marcar_presenca():
