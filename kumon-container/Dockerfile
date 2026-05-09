@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY api.py .
 
-RUN pip install flask flask-cors mysql-connector-python
+RUN pip install flask flask-cors mysql-connector-python && apk add --no-cache curl
 
 CMD ["python", "api.py"]

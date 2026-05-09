@@ -1,5 +1,9 @@
 # Documentacao Funcional -- Sistema de Controle de Eventos Kumon
 
+## Versão do Sistema
+
+Commit: 44a2418156ce18ea1a8673be8f6262e76a85a0c1
+
 ## 1. Proposito do Sistema
 
 Sistema web para gerenciamento de eventos presenciais em unidades Kumon. Permite registrar presenca de participantes, controlar entrega de premios por categoria e realizar sorteios ao vivo durante o evento.

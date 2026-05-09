@@ -65,9 +65,9 @@ services:
       - "8085:80"
       - "8443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-      - ./:/usr/share/nginx/html
+      - /opt/kumon-container/kumon-container/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /opt/kumon-container/kumon-container/ssl:/etc/nginx/ssl:ro
+      - /opt/kumon-container/kumon-container:/usr/share/nginx/html
     depends_on:
       - flask
       - phpmyadmin
