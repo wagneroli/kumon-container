@@ -1,0 +1,220 @@
+#V3
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import mysql.connector
+from mysql.connector import Error, pooling
+from datetime import datetime
+
+app = Flask(__name__)
+CORS(app)
+
+try:
+    connection_pool = pooling.MySQLConnectionPool(
+        pool_name="kumon_pool",
+        pool_size=5,
+        pool_reset_session=True,
+        host='151.106.110.1',
+        user='u819661735_wagner_01',
+        password='@@Camus1',
+        database='u819661735_db_tuareg',
+        connection_timeout=10,
+        autocommit=True,
+        use_pure=True
+    )
+except Error as err:
+    print(f"Erro pool: {err}")
+    connection_pool = None
+
+def get_db_connection():
+    try:
+        if connection_pool:
+            return connection_pool.get_connection()
+    except Error as err:
+        print(f"Erro conexão: {err}")
+    return None
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    conn = None
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            result = cursor.fetchone()
+            cursor.close()
+            return jsonify({"status": "ok", "database": "connected"}), 200
+    except Exception as e:
+        print(f"Erro: {e}")
+    finally:
+        if conn and conn.is_connected():
+            conn.close()
+    return jsonify({"status": "error"}), 500
+
+@app.route('/api/stats', methods=['GET'])
+def stats():
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # CORRIGIDO: tabela presenca (singular) e campo status
+        cursor.execute("SELECT COUNT(*) as total FROM participantes")
+        p = cursor.fetchone()['total']
+        
+        cursor.execute("SELECT COUNT(*) as total FROM presenca WHERE status = 'PRESENTE'")
+        pr = cursor.fetchone()['total']
+        
+        cursor.execute("SELECT COUNT(*) as total FROM premiacoes")
+        prem = cursor.fetchone()['total']
+        
+        cursor.close()
+        return jsonify({
+            "total_participantes": int(p), 
+            "total_presentes": int(pr), 
+            "total_premios": int(prem),
+            "total_sorteios": 0
+        }), 200
+    except Exception as e:
+        print(f"Erro stats: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/premio/categorias')
+def premio_categorias():
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT 
+                c.id, c.nome, COALESCE(c.tipo_premio, '') as tipo_premio,
+                COALESCE(COUNT(p.id), 0) as total,
+                COALESCE(SUM(CASE WHEN p.status = 'ENTREGUE' THEN 1 ELSE 0 END), 0) as entregues
+            FROM categorias c 
+            LEFT JOIN premiacoes p ON c.id = p.categoria_id 
+            LEFT JOIN presenca pr ON p.participante_id = pr.participante_id 
+            WHERE pr.status = 'PRESENTE' OR pr.id IS NULL
+            GROUP BY c.id, c.nome, c.tipo_premio 
+            ORDER BY c.id
+        """)
+        categorias = cursor.fetchall()
+        cursor.close()
+        return jsonify({'sucesso': True, 'categorias': categorias})
+    except Exception as e:
+        print(f"Erro /api/premio/categorias: {e}")
+        return jsonify({'sucesso': False, 'erro': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/premio/categoria/<int:categoria_id>')
+def premios_por_categoria(categoria_id):
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT 
+                p.id, par.numero, par.nome, par.tipo,
+                c.nome as categoria, 
+                p.status, p.data_entrega
+            FROM premiacoes p
+            JOIN participantes par ON par.id = p.participante_id
+            JOIN categorias c ON c.id = p.categoria_id
+            JOIN presenca pr ON pr.participante_id = par.id 
+            WHERE p.categoria_id = %s AND pr.status = 'PRESENTE'
+            ORDER BY par.numero
+        """, (categoria_id,))
+        premiacoes = cursor.fetchall()
+        cursor.close()
+        return jsonify({'sucesso': True, 'premiacoes': premiacoes})
+    except Exception as e:
+        print(f"Erro /api/premio/categoria: {e}")
+        return jsonify({'sucesso': False, 'erro': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/premio/marcar-entregue/<int:premiacao_id>', methods=['POST'])
+def marcar_entregue(premiacao_id):
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE premiacoes SET status = 'ENTREGUE', data_entrega = NOW() WHERE id = %s", (premiacao_id,))
+        cursor.close()
+        return jsonify({'sucesso': True, 'mensagem': 'Prêmio entregue'})
+    except Exception as e:
+        print(f"Erro marcar entregue: {e}")
+        return jsonify({'sucesso': False, 'erro': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/premio/marcar-pendente/<int:premiacao_id>', methods=['POST'])
+def marcar_pendente(premiacao_id):
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE premiacoes SET status = 'PENDENTE', data_entrega = NULL WHERE id = %s", (premiacao_id,))
+        cursor.close()
+        return jsonify({'sucesso': True, 'mensagem': 'Prêmio pendente'})
+    except Exception as e:
+        print(f"Erro marcar pendente: {e}")
+        return jsonify({'sucesso': False, 'erro': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+
+
+@app.route('/api/categorias', methods=['GET', 'POST'])
+def categorias():
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        if request.method == 'GET':
+            cursor.execute("SELECT id, nome, tipo_premio FROM categorias ORDER BY id DESC")
+            resultado = cursor.fetchall()
+            cursor.close()
+            return jsonify(resultado), 200
+        
+        elif request.method == 'POST':
+            dados = request.get_json()
+            nome = dados.get('nome', '').strip()
+            if not nome:
+                return jsonify({"error": "Nome obrigatório"}), 400
+            cursor.execute("INSERT INTO categorias (nome) VALUES (%s)", (nome,))
+            cursor.close()
+            return jsonify({"message": "OK"}), 201
+    except Exception as e:
+        print(f"Erro categorias: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/participantes', methods=['GET'])
+def participantes():
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM participantes ORDER BY numero ASC")
+        resultado = cursor.fetchall()
+        cursor.close()
+        return jsonify(resultado), 200
+    except Exception as e:
+        print(f"Erro participantes: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()

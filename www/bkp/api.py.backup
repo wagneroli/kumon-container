@@ -1,0 +1,308 @@
+#V10
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import mysql.connector
+from mysql.connector import pooling, Error
+
+app = Flask(__name__)
+CORS(app)
+
+try:
+    pool = pooling.MySQLConnectionPool(
+        pool_name="p", pool_size=5,
+        host='mysql', 
+        user='kumon_user',
+        password='kumon_pass_2025', 
+        database='kumon_db',
+        autocommit=True,
+        use_pure=True,
+        connection_timeout=5
+    )
+    print("✓ Pool MySQL conectado")
+except Error as e:
+    print(f"✗ Erro ao criar pool: {e}")
+    pool = None
+
+def get_conn():
+    try:
+        if pool:
+            return pool.get_connection()
+    except Error as e:
+        print(f"Erro conexão: {e}")
+    return None
+
+@app.route('/api/health')
+def health():
+    c = get_conn()
+    if c:
+        c.close()
+        return jsonify({"status": "ok"}), 200
+    return jsonify({"status": "error"}), 500
+
+@app.route('/api/stats')
+def stats():
+    try:
+        c = get_conn()
+        if not c:
+            return jsonify({"error": "DB not connected"}), 500
+        cur = c.cursor(dictionary=True)
+        cur.execute("SELECT COUNT(*) t FROM participantes")
+        p = cur.fetchone()['t'] or 0
+        cur.execute("SELECT COUNT(*) t FROM presenca WHERE status='PRESENTE'")
+        pr = cur.fetchone()['t'] or 0
+        cur.execute("SELECT COUNT(*) t FROM premiacoes")
+        prem = cur.fetchone()['t'] or 0
+        cur.close()
+        c.close()
+        return jsonify({"total_participantes": int(p), "total_presentes": int(pr), "total_premios": int(prem)})
+    except Exception as e:
+        print(f"Erro stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/categorias')
+def categorias():
+    try:
+        c = get_conn()
+        if not c:
+            return jsonify([]), 200
+        cur = c.cursor(dictionary=True)
+        cur.execute("SELECT * FROM categorias")
+        r = cur.fetchall()
+        cur.close()
+        c.close()
+        return jsonify(r), 200
+    except Exception as e:
+        print(f"Erro categorias: {e}")
+        return jsonify([]), 200
+
+@app.route('/api/participantes')
+def participantes():
+    try:
+        c = get_conn()
+        if not c:
+            return jsonify([]), 200
+        cur = c.cursor(dictionary=True)
+        cur.execute("SELECT * FROM participantes")
+        r = cur.fetchall()
+        cur.close()
+        c.close()
+        return jsonify(r), 200
+    except Exception as e:
+        print(f"Erro participantes: {e}")
+        return jsonify([]), 200
+
+@app.route('/api/premio/categorias')
+def premio_categorias():
+    try:
+        c = get_conn()
+        if not c:
+            return jsonify({'sucesso': True, 'categorias': []})
+        cur = c.cursor(dictionary=True)
+        cur.execute("""
+            SELECT 
+                c.id, c.nome, COALESCE(c.tipo_premio, '') as tipo_premio,
+                COALESCE(COUNT(p.id), 0) as total,
+                COALESCE(SUM(CASE WHEN p.status = 'ENTREGUE' THEN 1 ELSE 0 END), 0) as entregues
+            FROM categorias c 
+            LEFT JOIN premiacoes p ON c.id = p.categoria_id 
+            LEFT JOIN presenca pr ON p.participante_id = pr.participante_id AND pr.status = 'PRESENTE'
+            GROUP BY c.id, c.nome, c.tipo_premio 
+            ORDER BY c.id
+        """)
+        cats = cur.fetchall()
+        cur.close()
+        c.close()
+        return jsonify({'sucesso': True, 'categorias': cats})
+    except Exception as e:
+        print(f"Erro /api/premio/categorias: {e}")
+        return jsonify({'sucesso': True, 'categorias': []})
+
+@app.route('/api/premio/categoria/<int:categoria_id>')
+def premio_categoria(categoria_id):
+    return jsonify({'sucesso': True, 'premiacoes': []})
+
+@app.route('/api/presenca', methods=['POST'])
+def marcar_presenca():
+    try:
+        data = request.get_json() or {}
+        participante_id = data.get('participante_id')
+        status = data.get('status', 'PRESENTE')
+
+        if not participante_id:
+            return jsonify({'sucesso': False, 'erro': 'participante_id obrigatório'}), 400
+
+        c = get_conn()
+        if not c:
+            return jsonify({'sucesso': False, 'erro': 'sem conexão com banco'}), 500
+
+        cur = c.cursor(dictionary=True)
+
+        # Verificar se já existe registro
+        cur.execute("SELECT id FROM presenca WHERE participante_id = %s LIMIT 1", (participante_id,))
+        existe = cur.fetchone()
+
+        if existe:
+            # Update do status existente
+            cur.execute("""
+                UPDATE presenca 
+                SET status = %s 
+                WHERE participante_id = %s
+            """, (status, participante_id))
+        else:
+            # Insert novo
+            cur.execute("""
+                INSERT INTO presenca (participante_id, status)
+                VALUES (%s, %s)
+            """, (participante_id, status))
+
+        c.commit()
+        cur.close()
+        c.close()
+
+        return jsonify({'sucesso': True}), 200
+    except Exception as e:
+        print(f"Erro /api/presenca: {e}")
+        return jsonify({'sucesso': False, 'erro': str(e)}), 500
+
+@app.route('/api/presenca/lista')
+def presenca_lista():
+    try:
+        c = get_conn()
+        if not c:
+            return jsonify([]), 200
+        cur = c.cursor(dictionary=True)
+        cur.execute("""
+            SELECT 
+                p.id,
+                p.numero,
+                p.nome,
+                p.tipo,
+                COALESCE(pr.status, 'AUSENTE') as status_presenca,
+                pr.id as presenca_id
+            FROM participantes p
+            LEFT JOIN presenca pr ON p.id = pr.participante_id
+            ORDER BY p.numero ASC
+        """)
+        r = cur.fetchall()
+        cur.close()
+        c.close()
+        return jsonify(r), 200
+    except Exception as e:
+        print(f"Erro /api/presenca/lista: {e}")
+        return jsonify([]), 200
+
+@app.route('/api/presenca/ausente', methods=['POST'])
+def marcar_ausente():
+    try:
+        data = request.get_json() or {}
+        participante_id = data.get('participante_id')
+
+        if not participante_id:
+            return jsonify({'sucesso': False, 'erro': 'participante_id obrigatório'}), 400
+
+        c = get_conn()
+        if not c:
+            return jsonify({'sucesso': False, 'erro': 'sem conexão com banco'}), 500
+
+        cur = c.cursor(dictionary=True)
+
+        # Update status para AUSENTE
+        cur.execute("""
+            UPDATE presenca 
+            SET status = 'AUSENTE' 
+            WHERE participante_id = %s
+        """, (participante_id,))
+
+        c.commit()
+        cur.close()
+        c.close()
+
+        return jsonify({'sucesso': True}), 200
+    except Exception as e:
+        print(f"Erro /api/presenca/ausente: {e}")
+        return jsonify({'sucesso': False, 'erro': str(e)}), 500
+
+@app.route('/api/premios/lista')
+def premios_lista():
+    try:
+        c = get_conn()
+        if not c:
+            return jsonify([]), 200
+        cur = c.cursor(dictionary=True)
+        cur.execute("""
+            SELECT 
+              id,
+              id_participante,
+              nome,
+              categoria_nome,
+              status_presente,
+              status_entrega
+            FROM lista_de_premios
+            ORDER BY categoria_nome, nome
+        """)
+        r = cur.fetchall()
+        cur.close()
+        c.close()
+        return jsonify(r), 200
+    except Exception as e:
+        print(f"Erro /api/premios/lista: {e}")
+        return jsonify([]), 200
+
+@app.route('/api/premios/categoria/<categoria_nome>')
+def premios_por_categoria(categoria_nome):
+    try:
+        c = get_conn()
+        if not c:
+            return jsonify([]), 200
+        cur = c.cursor(dictionary=True)
+        cur.execute("""
+            SELECT 
+              id,
+              id_participante,
+              nome,
+              categoria_nome,
+              status_presente,
+              status_entrega
+            FROM lista_de_premios
+            WHERE categoria_nome = %s
+            ORDER BY nome
+        """, (categoria_nome,))
+        r = cur.fetchall()
+        cur.close()
+        c.close()
+        return jsonify(r), 200
+    except Exception as e:
+        print(f"Erro /api/premios/categoria: {e}")
+        return jsonify([]), 200
+
+@app.route('/api/premios/<int:premio_id>', methods=['PUT'])
+def atualizar_premio(premio_id):
+    try:
+        data = request.get_json() or {}
+        status_presente = data.get('status_presente')
+        status_entrega = data.get('status_entrega')
+
+        c = get_conn()
+        if not c:
+            return jsonify({'sucesso': False, 'erro': 'sem conexão'}), 500
+
+        cur = c.cursor(dictionary=True)
+        cur.execute("""
+            UPDATE lista_de_premios 
+            SET status_presente = %s, status_entrega = %s
+            WHERE id = %s
+        """, (status_presente, status_entrega, premio_id))
+
+        c.commit()
+        cur.close()
+        c.close()
+
+        return jsonify({'sucesso': True}), 200
+    except Exception as e:
+        print(f"Erro ao atualizar prêmio: {e}")
+        return jsonify({'sucesso': False, 'erro': str(e)}), 500
+
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=False)
