@@ -1,0 +1,89 @@
+version: "3.8"
+
+services:
+  flask:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kumon-api
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=${DB_PORT}
+    restart: always
+    networks:
+      - kumon-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/api/health || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+
+  mysql:
+    image: mysql:8.0
+    container_name: kumon-mysql
+    command:
+      - --bind-address=0.0.0.0
+      - --max_connections=1000
+      - --wait_timeout=3600
+      - --local-infile=1
+      - --secure-file-priv=""
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+    networks:
+      - kumon-network
+
+  phpmyadmin:
+    image: arm64v8/phpmyadmin:5.2
+    container_name: kumon-phpmyadmin
+    environment:
+      PMA_HOST: ${PMA_HOST}
+      PMA_PORT: ${PMA_PORT}
+      PMA_USER: ${PMA_USER}
+      PMA_PASSWORD: ${PMA_PASSWORD}
+      PMA_ARBITRARY: 1
+    ports:
+      - "127.0.0.1:8082:80"
+    depends_on:
+      - mysql
+    restart: always
+    networks:
+      - kumon-network
+
+  nginx:
+    image: nginx:latest
+    container_name: kumon-nginx
+    ports:
+      - "8085:80"
+      - "8443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./:/usr/share/nginx/html
+    depends_on:
+      - flask
+      - phpmyadmin
+    restart: always
+    networks:
+      - kumon-network
+
+networks:
+  kumon-network:
+    driver: bridge
+
+volumes:
+  mysql_data:

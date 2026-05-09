@@ -1,0 +1,34 @@
+# Credentials
+.env
+
+# SSL certificates
+ssl/
+
+# Backups
+bkp/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+mysql_data/
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
