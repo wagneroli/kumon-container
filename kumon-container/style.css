@@ -1,5 +1,5 @@
 /* ============================================
-   KUMON EVENT SYSTEM — Modern Design System
+   KUMON EVENT SYSTEM  Modern Design System
    ============================================ */
 
 /* ------------------------------------------
@@ -54,7 +54,7 @@
   --pink-500: #ec4899;
   --cyan-500: #06b6d4;
 
-  /* Semantic tokens — Light */
+  /* Semantic tokens  Light */
   --color-bg: #f8fafc;
   --color-surface: #ffffff;
   --color-surface-hover: #f9fafb;
@@ -886,8 +886,8 @@ select.form-control {
 .participant-name { font-weight: var(--font-weight-semibold); font-size: var(--font-size-base); }
 .participant-meta { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-top: var(--space-2); }
 
-.participant-actions { display: flex; gap: var(--space-8); flex-shrink: 0; align-items: center; }
-.participant-actions .btn--sm { min-width: 90px; text-align: center; }
+.participant-actions { display: flex; gap: var(--space-8); flex-shrink: 0; align-items: center; width: 208px; }
+.participant-actions .btn--sm { flex: 1; text-align: center; justify-content: center; }
 
 /* ------------------------------------------
    15. Modal / Overlay
