@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema de Controle de Eventos</title>
+    <link rel="stylesheet" href="style.css?v=70056" />
+    <script src="script-com-api.js?v=70056"></script>
+  </head>
+  <body>
+    <div class="app-container">
+      <nav class="sidebar">
+        <div class="logo">
+          <h2>KUMON</h2>
+        </div>
+        <div class="nav-buttons">
+          <button class="nav-btn active" data-page="dashboard">
+            <span class="icon">📊</span>Dashboard
+          </button>
+          <button class="nav-btn" data-page="recepcao">
+            <span class="icon">🎫</span>Recepção
+          </button>
+          <button class="nav-btn" data-page="premiacao">
+            <span class="icon">🎁</span>Premiação
+          </button>
+          <button class="nav-btn" data-page="sorteio">
+            <span class="icon">🎰</span>Sorteio
+          </button>
+          <button class="nav-btn" data-page="relatorios">
+            <span class="icon">📋</span>Relatórios
+          </button>
+          <button class="nav-btn" data-page="gerenciar">
+            <span class="icon">⚙️</span>Gerenciar
+          </button>
+        </div>
+      </nav>
+
+      <main class="main-content">
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="page active">
+          <div class="page-header">
+            <h1>📊 Dashboard</h1>
+          </div>
+          <div class="page-content">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-value" id="stat-participantes">0</div>
+                <div class="stat-label">Participantes Registrados</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-presentes">0</div>
+                <div class="stat-label">Presentes</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-premios">0</div>
+                <div class="stat-label">Prêmios Entregues</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-sorteios">0</div>
+                <div class="stat-label">Sorteios Realizados</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px">
+              <div class="card__header">
+                <h2>📊 Taxa de Presença</h2>
+              </div>
+              <div class="card__body">
+                <div
+                  style="
+                    background: #f0f0f0;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    height: 30px;
+                  "
+                >
+                  <div
+                    id="progress-presenca"
+                    style="
+                      background: #32b8c6;
+                      height: 100%;
+                      width: 0%;
+                      transition: width 0.3s;
+                    "
+                  ></div>
+                </div>
+                <div
+                  id="progress-text"
+                  style="
+                    margin-top: 10px;
+                    text-align: center;
+                    font-weight: bold;
+                  "
+                >
+                  0 / 0 presentes (0%)
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RECEPÇÃO -->
+        <div id="recepcao" class="page">
+          <div class="page-header">
+            <h1>🎫 Recepção - Marcar Presença</h1>
+          </div>
+          <div class="page-content">
+            <div class="card">
+              <div class="card__header">
+                <h2>Buscar Participante</h2>
+              </div>
+              <div class="card__body">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px">
+                  <div style="flex: 1">
+                    <label
+                      class="form-label"
+                      style="margin-bottom: 5px; display: block"
+                      >Buscar</label
+                    >
+                    <input
+                      type="text"
+                      id="busca-recepcao"
+                      class="form-control"
+                      placeholder="Buscar por matrícula ou nome..."
+                      oninput="filtrarListaPresenca()"
+                    />
+                  </div>
+                  <div style="flex: 0 0 180px">
+                    <label
+                      class="form-label"
+                      style="margin-bottom: 5px; display: block"
+                      >Status</label
+                    >
+                    <select
+                      id="filtro-status"
+                      class="form-control"
+                      onchange="filtrarPorStatusPresenca(this.value)"
+                    >
+                      <option value="TODOS">Todos os Status</option>
+                      <option value="PRESENTE">Presentes</option>
+                      <option value="AUSENTE">Ausentes</option>
+                    </select>
+                  </div>
+                </div>
+                <button
+                  onclick="carregarListaPresenca()"
+                  class="btn btn--secondary"
+                  style="width: 120px"
+                >
+                  Limpar
+                </button>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 15px">
+              <div class="card__header">
+                <h2>Lista de Presença</h2>
+              </div>
+              <div class="card__body">
+                <div
+                  id="lista-presenca"
+                  style="
+                    max-height: 50vh;
+                    overflow-y: auto;
+                    overflow-x: hidden;
+                    border-radius: 8px;
+                  "
+                >
+                  <p class="empty-state">Nenhum participante registrado</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PREMIAÇÃO -->
+        <div id="premiacao" class="page">
+          <div class="page-header">
+            <h1>🎁 Premiação</h1>
+          </div>
+          <div class="page-content">
+            <!-- Filtro de categoria -->
+            <div class="card">
+              <div class="card__header">
+                <h2>Selecionar Categoria</h2>
+              </div>
+              <div class="card__body">
+                <div class="form-group">
+                  <label class="form-label">Categoria</label>
+                  <select
+                    id="select-categoria"
+                    class="form-control"
+                    onchange="carregarPremiosPorCategoria()"
+                  >
+                    <option value="">Carregando categorias...</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lista de prêmios -->
+            <div class="card" style="margin-top: 20px">
+              <div class="card__header">
+                <h2>Lista de Prêmios</h2>
+              </div>
+              <div
+                id="lista-premios-container"
+                style="max-height: 50vh; overflow-y: auto; overflow-x: hidden"
+              >
+                <p class="empty-state">
+                  Selecione uma categoria para ver os alunos
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SORTEIO -->
+        <div id="sorteio" class="page">
+          <div class="page-header">
+            <h1>🎰 Sorteio</h1>
+          </div>
+          <div class="page-content">
+            <div class="card">
+              <div class="card__header">
+                <h2>Realizar Sorteio</h2>
+              </div>
+              <div class="card__body">
+                <p style="color: #666; margin-bottom: 20px">
+                  Sorteio automático entre participantes
+                  <strong>PRESENTES</strong>
+                </p>
+                <div id="status-sorteio" style="margin-bottom: 20px"></div>
+                <div style="display: flex; gap: 12px">
+                  <button
+                    id="btn-realizar-sorteio"
+                    class="btn btn--primary btn--lg"
+                    style="flex: 1"
+                  >
+                    Realizar Sorteio
+                  </button>
+                  <button
+                    id="btn-limpar-sorteios"
+                    class="btn btn--outline btn--lg"
+                  >
+                    Limpar Sorteios
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px">
+              <div class="card__header">
+                <h2>Histórico de Sorteios</h2>
+              </div>
+              <div class="card__body">
+                <div
+                  id="historico-sorteios"
+                  style="max-height: 400px; overflow-y: auto"
+                >
+                  <p style="color: #999; text-align: center; padding: 20px">
+                    Nenhum sorteio realizado
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RELATÓRIOS -->
+        <div id="relatorios" class="page">
+          <div class="page-header">
+            <h1>📋 Relatórios</h1>
+          </div>
+          <div class="page-content">
+            <h3>Resumo do Evento</h3>
+            <div
+              id="resumo-evento"
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+              "
+            >
+              <div class="stat-box">
+                <div class="stat-box-value">0</div>
+                <div class="stat-box-label">Participantes</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-box-value">0</div>
+                <div class="stat-box-label">Presentes</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-box-value">0</div>
+                <div class="stat-box-label">Prêmios Entregues</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-box-value">0</div>
+                <div class="stat-box-label">Sorteios</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px">
+              <div class="card__header">
+                <h2>Presença</h2>
+              </div>
+              <div class="card__body">
+                <div id="relatorio-presenca">
+                  <p class="empty-state">Nenhum dado</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px">
+              <div class="card__header">
+                <h2>Premiação</h2>
+              </div>
+              <div class="card__body">
+                <div id="relatorio-premiacao">
+                  <p class="empty-state">Nenhum prêmio</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px">
+              <div class="card__header">
+                <h2>Sorteios</h2>
+              </div>
+              <div class="card__body">
+                <div id="relatorio-sorteios">
+                  <p class="empty-state">Nenhum sorteio</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GERENCIAR -->
+        <div id="gerenciar" class="page">
+          <div class="page-header">
+            <h1>⚙️ Gerenciar Participantes</h1>
+          </div>
+          <div class="page-content">
+            <div class="card">
+              <div class="card__header">
+                <h2>Lista de Participantes</h2>
+              </div>
+              <div class="card__body">
+                <div id="lista-participantes">
+                  <p class="empty-state">Nenhum participante registrado</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
