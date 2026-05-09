@@ -1,8 +1,8 @@
-# WAGNER2 - Documentacao Funcional -- Sistema de Controle de Eventos Kumon
+# - Documentacao Funcional -- Sistema de Controle de Eventos Kumon
 
 ## 1. Proposito do Sistema
 
-Sistema WAGNER-web para gerenciamento de eventos presenciais em unidades Kumon. Permite registrar presenca de participantes, controlar entrega de premios por categoria e realizar sorteios ao vivo durante o evento.
+Sistema web para gerenciamento de eventos presenciais em unidades Kumon. Permite registrar presenca de participantes, controlar entrega de premios por categoria e realizar sorteios ao vivo durante o evento.
 
 ---
 
