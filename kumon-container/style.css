@@ -887,7 +887,7 @@ select.form-control {
 .participant-meta { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-top: var(--space-2); }
 
 .participant-actions { display: flex; gap: var(--space-8); flex-shrink: 0; align-items: center; width: 208px; }
-.participant-actions .btn--sm { min-width: 90px; flex: 1; text-align: center; justify-content: center; }
+.participant-actions .btn--sm { flex: 1; text-align: center; justify-content: center; }
 
 /* ------------------------------------------
    15. Modal / Overlay
