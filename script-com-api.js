@@ -588,7 +588,7 @@
           (premio.categoria_nome || "-") +
           "</td>" +
           "<td><strong>#" +
-          (premio.numero || premio.participante_id) +
+          (premio.numero || premio.participante_numero) +
           "</strong> - " +
           (premio.nome || "-") +
           "</td>" +

@@ -152,30 +152,19 @@ def premios_por_categoria(categoria_id):
 
         cur = c.cursor(dictionary=True)
         cur.execute("""
-          SELECT
-            lp.id,
-            lp.participante_id,
-            lp.categoria_id,
-            lp.nome,
-            lp.numero,
-            lp.tipo,
-            lp.categoria_nome,
-            lp.status_presente,
-            lp.status_entrega,
-            COALESCE(p.status_pago, 'NAO_PAGO') AS status_pago
-          FROM lista_de_premios lp
-          LEFT JOIN participantes p ON lp.participante_id = p.id
-          WHERE lp.categoria_id = %s
-            AND lp.status_presente = 'SIM'
-            AND lp.tipo IN ('ALUNO',
+          SELECT *
+          FROM lista_de_premios
+          WHERE categoria_id = %s
+            AND status_presente = 'SIM'
+            AND tipo IN ('ALUNO',
                      'ALUNO/AUXILIAR',
                      'AUXILIAR',
                      'AUXILIAR/ALUNA',
                      'CONCLUINTE/ALUNA',
                      'CONCLUINTE/AUXILIAR',
                      'CONCLUINTE')
-            AND (p.status_pago = 'PAGO' OR p.status_pago IS NULL)
-          ORDER BY lp.nome
+            AND status_pago = 'PAGO'
+          ORDER BY nome
         """, (categoria_id,))
 
         r = cur.fetchall()
@@ -202,12 +191,11 @@ def validar_premiacoes():
         # Total de elegiveis (presentes + pagos)
         cur.execute("""
             SELECT COUNT(*) AS total
-            FROM lista_de_premios lp
-            INNER JOIN participantes p ON lp.participante_id = p.id
-            WHERE lp.status_presente = 'SIM'
-              AND p.status_pago = 'PAGO'
-              AND lp.tipo IN ('ALUNO','ALUNO/AUXILIAR','AUXILIAR','AUXILIAR/ALUNA',
-                              'CONCLUINTE/ALUNA','CONCLUINTE/AUXILIAR','CONCLUINTE')
+            FROM lista_de_premios
+            WHERE status_presente = 'SIM'
+              AND status_pago = 'PAGO'
+              AND tipo IN ('ALUNO','ALUNO/AUXILIAR','AUXILIAR','AUXILIAR/ALUNA',
+                           'CONCLUINTE/ALUNA','CONCLUINTE/AUXILIAR','CONCLUINTE')
         """)
         elegiveis = cur.fetchone()['total']
 
@@ -224,20 +212,19 @@ def validar_premiacoes():
         # Violacoes: presentes mas NAO PAGOS
         cur.execute("""
             SELECT
-                lp.id,
-                lp.participante_id,
-                lp.nome,
-                lp.numero,
-                lp.categoria_nome,
-                lp.status_presente,
-                COALESCE(p.status_pago, 'NAO_PAGO') AS status_pago
-            FROM lista_de_premios lp
-            LEFT JOIN participantes p ON lp.participante_id = p.id
-            WHERE lp.status_presente = 'SIM'
-              AND (p.status_pago != 'PAGO' OR p.status_pago IS NULL)
-              AND lp.tipo IN ('ALUNO','ALUNO/AUXILIAR','AUXILIAR','AUXILIAR/ALUNA',
-                              'CONCLUINTE/ALUNA','CONCLUINTE/AUXILIAR','CONCLUINTE')
-            ORDER BY lp.categoria_nome, lp.nome
+                id,
+                participante_numero,
+                nome,
+                numero,
+                categoria_nome,
+                status_presente,
+                status_pago
+            FROM lista_de_premios
+            WHERE status_presente = 'SIM'
+              AND status_pago != 'PAGO'
+              AND tipo IN ('ALUNO','ALUNO/AUXILIAR','AUXILIAR','AUXILIAR/ALUNA',
+                           'CONCLUINTE/ALUNA','CONCLUINTE/AUXILIAR','CONCLUINTE')
+            ORDER BY categoria_nome, nome
         """)
         violacoes = cur.fetchall()
 
@@ -290,14 +277,14 @@ def marcar_presenca():
         print(f"[DEBUG] Convertendo ID {participante_id} → NUMERO {numero_participante}")
         
         # Verificar se já existe registro
-        cur.execute("SELECT id FROM presenca WHERE participante_id = %s LIMIT 1", (numero_participante,))
+        cur.execute("SELECT id FROM presenca WHERE participante_numero = %s LIMIT 1", (numero_participante,))
         existe = cur.fetchone()
         
         if existe:
-            cur.execute("UPDATE presenca SET status = %s WHERE participante_id = %s", (status, numero_participante))
+            cur.execute("UPDATE presenca SET status = %s WHERE participante_numero = %s", (status, numero_participante))
             print(f"[DEBUG] UPDATE presenca: numero={numero_participante}, status={status}")
         else:
-            cur.execute("INSERT INTO presenca (participante_id, status) VALUES (%s, %s)", (numero_participante, status))
+            cur.execute("INSERT INTO presenca (participante_numero, status) VALUES (%s, %s)", (numero_participante, status))
             print(f"[DEBUG] INSERT presenca: numero={numero_participante}, status={status}")
         
         c.commit()
@@ -326,7 +313,7 @@ def presenca_lista():
                 COALESCE(p.status_pago, 'NAO_PAGO') as status_pago,
                 pr.id as presenca_id
             FROM participantes p
-            LEFT JOIN presenca pr ON p.numero = pr.participante_id
+            LEFT JOIN presenca pr ON p.numero = pr.participante_numero
             ORDER BY p.numero ASC
         """)
         r = cur.fetchall()
@@ -362,7 +349,7 @@ def marcar_ausente():
             c.close()
             return jsonify({'sucesso': False, 'erro': 'participante não encontrado'}), 400
         
-        cur.execute("UPDATE presenca SET status = 'AUSENTE' WHERE participante_id = %s", (numero_participante,))
+        cur.execute("UPDATE presenca SET status = 'AUSENTE' WHERE participante_numero = %s", (numero_participante,))
         c.commit()
         cur.close()
         c.close()
@@ -440,7 +427,7 @@ def sorteio(categoria_id):
         cur.execute("""
             SELECT p.numero, p.nome
             FROM participantes p
-            INNER JOIN presenca pr ON p.numero = pr.participante_id
+            INNER JOIN presenca pr ON p.numero = pr.participante_numero
             WHERE pr.status = 'PRESENTE'
             AND p.numero NOT IN (
                 SELECT DISTINCT participante_numero FROM sorteados WHERE categoria_id = %s
@@ -524,7 +511,7 @@ def sorteio_total_disponiveis(categoria_id):
         cur.execute("""
             SELECT COUNT(*) as total
             FROM participantes p
-            INNER JOIN presenca pr ON p.numero = pr.participante_id
+            INNER JOIN presenca pr ON p.numero = pr.participante_numero
             WHERE pr.status = 'PRESENTE'
             AND p.numero NOT IN (
                 SELECT DISTINCT participante_numero FROM sorteados WHERE categoria_id = %s
