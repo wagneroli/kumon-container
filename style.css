@@ -212,11 +212,21 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   min-height: 100vh;
-  overflow: hidden;
+  min-height: 100dvh; /* iOS Safari dynamic viewport */
+}
+
+/* Improve touch scrolling */
+.main-content,
+.data-table-wrapper,
+.sidebar-nav {
+  -webkit-overflow-scrolling: touch;
 }
 
 a {
@@ -251,6 +261,7 @@ a:hover {
 .app-container {
   display: flex;
   height: 100vh;
+  height: 100dvh; /* iOS Safari dynamic viewport */
   overflow: hidden;
 }
 
@@ -282,14 +293,7 @@ a:hover {
 .sidebar-logo-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, var(--teal-500), var(--teal-600));
   border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-lg);
   flex-shrink: 0;
 }
 
@@ -1486,6 +1490,17 @@ select.form-control {
 /* ------------------------------------------
    21. Responsive
    ------------------------------------------ */
+
+/* iOS safe area support */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .sidebar {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .toast-container {
+    bottom: calc(var(--space-24) + env(safe-area-inset-bottom));
+  }
+}
+
 @media (max-width: 1024px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1496,12 +1511,14 @@ select.form-control {
 }
 
 @media (max-width: 768px) {
+  /* iOS safe-area sidebar */
   .sidebar {
     position: fixed;
     top: 0;
     bottom: 0;
     transform: translateX(-100%);
     box-shadow: var(--shadow-xl);
+    padding-top: env(safe-area-inset-top);
   }
 
   .sidebar.open {
@@ -1510,6 +1527,12 @@ select.form-control {
 
   .sidebar-toggle {
     display: flex;
+    top: calc(var(--space-16) + env(safe-area-inset-top));
+    left: calc(var(--space-16) + env(safe-area-inset-left));
+  }
+
+  .main-content {
+    padding-top: 56px; /* espaço para o hamburger toggle */
   }
 
   .page {
@@ -1543,10 +1566,39 @@ select.form-control {
     justify-content: flex-end;
   }
 
+  /* Larger touch targets on mobile */
+  .btn--sm {
+    padding: var(--space-10) var(--space-18);
+    min-height: 44px;
+    font-size: var(--font-size-base);
+  }
+  .btn--icon {
+    width: 44px;
+    height: 44px;
+  }
+  .nav-btn {
+    padding: var(--space-14) var(--space-16);
+    min-height: 48px;
+  }
+  .form-control {
+    padding: var(--space-12) var(--space-14);
+    font-size: var(--font-size-lg); /* prevents iOS zoom on focus */
+  }
+  select.form-control {
+    background-position: right var(--space-16) center;
+    padding-right: var(--space-48);
+  }
+
+  /* Table hint: show scroll shadow */
+  .data-table-wrapper {
+    max-height: 50vh;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .toast-container {
     left: var(--space-16);
     right: var(--space-16);
-    bottom: var(--space-16);
+    bottom: calc(var(--space-16) + env(safe-area-inset-bottom));
   }
   .toast {
     min-width: 0;
@@ -1570,9 +1622,11 @@ select.form-control {
 
   .modal {
     padding: var(--space-32) var(--space-20);
+    width: 95%;
+    max-width: none;
   }
   .sorteio-number {
-    font-size: 80px;
+    font-size: 64px;
   }
 
   .card__body {
@@ -1580,5 +1634,20 @@ select.form-control {
   }
   .card__header {
     padding: var(--space-16);
+  }
+
+  /* Form controls full-width on small phones */
+  .card__body .form-group {
+    margin-bottom: var(--space-12);
+  }
+
+  /* Stat cards more compact */
+  .stat-card-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .stat-card-icon svg {
+    width: 16px;
+    height: 16px;
   }
 }
