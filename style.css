@@ -291,9 +291,9 @@ a:hover {
 }
 
 .sidebar-logo-icon {
-  width: 40px;
+  width: auto;
   height: 40px;
-  border-radius: var(--radius-md);
+  object-fit: contain;
   flex-shrink: 0;
 }
 
