@@ -970,40 +970,52 @@ select.form-control {
 }
 
 /* ------------------------------------------
-   11. Pill Tabs — Filter
+   11. Segmented Control — Filter
    ------------------------------------------ */
 .pill-tabs {
-  display: flex;
-  gap: var(--space-6);
-  flex-wrap: wrap;
+  display: inline-flex;
+  background: var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 1px;
+  border: 1px solid var(--color-border);
 }
 
 .pill-tab {
-  padding: var(--space-8) var(--space-18);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-full);
+  padding: var(--space-8) var(--space-20);
+  border: none;
+  border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   font-family: var(--font-body);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-secondary);
   background: transparent;
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
   letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .pill-tab:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: var(--color-primary-light);
+  color: var(--color-text);
+  background: var(--color-surface-hover);
 }
 
 .pill-tab.active {
-  background: var(--color-primary);
-  color: var(--color-primary-text);
-  border-color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
-  box-shadow: 0 2px 8px rgba(13, 138, 120, 0.2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-xs);
+}
+
+[data-theme="dark"] .pill-tabs {
+  background: var(--ink-900);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .pill-tab.active {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ------------------------------------------
